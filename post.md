@@ -38,13 +38,13 @@ If we run this, it will just print out some numbers. For me it was around 17k. I
 
 Following the official Docker image for Go, we would write an "onbuild" Dockerfile like this:
 
-```
+```dockerfile
 FROM golang:onbuild
 ```
 
 The "onbuild" images assume your project structure is standard and will build your app like a generic Go app. If you want more control, you could use their standard Go base image and compile yourself:
 
-```
+```dockerfile
 FROM golang:latest
 RUN mkdir /app
 ADD . /app/
@@ -83,7 +83,7 @@ docker build -t example-scratch -f Dockerfile.scratch .
 
 And Dockerfile.scratch is simply:
 
-```
+```dockerfile
 FROM scratch
 ADD main /
 CMD ["/main"]
@@ -119,7 +119,7 @@ Get https://google.com: x509: failed to load system roots and no roots provided
 
 Great, now what? This is why I chose to use SSL in our example. This is a really common gotcha for this scenario: for making SSL requests we need the SSL root certificates. So how do we add these to our container? Depending on the operating system, these certificates can be in many different places. If you look at [Go's x509 library](https://golang.org/src/crypto/x509/root_unix.go), you can see all the locations where Go searches. For many linux distributions, this is `/etc/ssl/certs/ca-certificates.crt`. So first, we'll copy the `ca-certificates.crt` from our machine (or a linux vm or an online certificate provider) into our repository. Then we'll add an `ADD` to our Dockerfile to place this file where Go expects it:
 
-```
+```dockerfile
 FROM scratch
 ADD ca-certificates.crt /etc/ssl/certs/
 ADD main /
