@@ -117,9 +117,16 @@ $ docker run -it example-scratch
 Get https://google.com: x509: failed to load system roots and no roots provided
 ```
 
-Great, now what? This is why I chose to use SSL in our example. This is a really common gotcha for this scenario: for making SSL requests we need the SSL root certificates.
+Great, now what? This is why I chose to use SSL in our example. This is a really common gotcha for this scenario: for making SSL requests we need the SSL root certificates. So how do we add these to our container? Depending on the operating system, these certificates can be in many different places. If you look at [Go's x509 library](https://golang.org/src/crypto/x509/root_unix.go), you can see all the locations where Go searches. For many linux distributions, this is `/etc/ssl/certs/ca-certificates.crt`. So first, we'll copy the `ca-certificates.crt` from our machine (or a linux vm or an online certificate provider) into our repository. Then we'll add an `ADD` to our Dockerfile to place this file where Go expects it:
 
-TODO: add in root certs, compare final size
+```
+FROM scratch
+ADD ca-certificates.crt /etc/ssl/certs/
+ADD main /
+CMD ["/main"]
+```
+
+Now just rebuild our image and run it, and it works! Cool! Now let's see how big our app is now:
 
 ```
 REPOSITORY          TAG                                        IMAGE ID            CREATED              VIRTUAL SIZE
@@ -131,3 +138,11 @@ golang              1.4.2                                      121a93c90463     
 golang              latest                                     121a93c90463        9 days ago           514.9 MB
 scratch             latest                                     511136ea3c5a        22 months ago        0 B
 ```
+
+We've added a little more than half a meg (and most of this is from the static binary, not the root certs). This is a really nice little container, it'll be really easy to push and pull between registries.
+
+## Conclusion
+
+So, our tactic in this post was to whittle down the container size for a Go application. Go is special in that it can create a statically linked binary that fully contains the application. Other languages can do this, but certainly not all of them. If we were to apply this technique of reducing container size to other languages, it would depend on what their minimal requirements are. For example, a Java or JVM app could be compiled outside a container and then be injected into a container that only has a JVM (and it's dependencies). This is at least smaller than a container with the JDK present.
+
+I'm really looking forward to the strides the community makes in creating both minimal OSs for container guests, and also at aggressively trimming down the requirements for all kinds of languages. The great thing about the public Docker hub is these can be shared with everyone easily.
